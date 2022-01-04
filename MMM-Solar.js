@@ -10,17 +10,17 @@ Module.register("MMM-Solar",{
         url: "https://api.enphaseenergy.com/api/v2/systems/",
         apiKey: "", //Enter API key
         userId: "4d7a45774e6a41320a", //Sample user ID
-	      systemId: "67", //Sample system
-	      refInterval: 1000 * 60 * 5, //5 minutes
+        systemId: "67", //Sample system
+        refInterval: 1000 * 60 * 5, //5 minutes
         basicHeader: false,
     },
 
     start: function() {
         Log.info("Starting module: " + this.name);
 
-        this.titles = ["Current Power:", "Daily Energy:", "Lifetime Energy:", "Active Inverters: ", "Current Status:"];
-	      this.suffixes = ["Watts", "kWh", "MWh", "", ""];
-	      this.results = ["Loading", "Loading", "Loading", "Loading", "Loading"];
+        this.titles = ["Current Power:", "Daily Energy:", "Lifetime Energy:", "Active Inverters: ", "Current Status:", "System Size:"];
+        this.suffixes = ["Watts", "kWh", "MWh", "", "", "Watts"];
+        this.results = ["Loading", "Loading", "Loading", "Loading", "Loading", "Loading"];
         this.loaded = false;
         this.getSolarData();
 
@@ -49,85 +49,101 @@ Module.register("MMM-Solar",{
 
         this.sendSocketNotification("GET_SOLAR", {
             config: this.config
-          });
+        });
     },
 
     //Handle node helper response
     socketNotificationReceived: function(notification, payload) {
-      	if (notification === "SOLAR_DATA") {
+          if (notification === "SOLAR_DATA") {
+            // Summary api call returns something like the following:
+            // {
+            // "current_power": 3322,
+            // "energy_lifetime": 19050353,
+            // "energy_today": 25639,
+            // "last_interval_end_at": 1380632400,
+            // "last_report_at": 1380632791,
+            // "modules": 31,
+            // "operational_at": 1201362300,
+            // "size_w": 5250,
+            // "source": "microinverters",
+            // "status": "normal",
+            // "summary_date": "2014-01-06",
+            // "system_id": 123
+            // }
 
             this.results[0] = payload.current_power;
-  		      this.results[1] = (payload.energy_today / 1000).toFixed(2);
+            this.results[1] = (payload.energy_today / 1000).toFixed(2);
             this.results[2] = (payload.energy_lifetime / 1000000).toFixed(1);
-  		      this.results[3] = payload.modules;
+            this.results[3] = payload.modules;
 
             var statusNew = payload.status.charAt(0).toUpperCase() + payload.status.slice(1);
-  		      this.results[4] = statusNew;
+            this.results[4] = statusNew;
+            this.results[5] = payload.size_w;
             this.loaded = true;
-          	this.updateDom(1000);
+            this.updateDom(1000);
         }
     },
 
     // Override dom generator.
     getDom: function() {
 
-        var wrapper = document.createElement("div");
-	if (this.config.apiKey === "" || this.config.userId === "" || this.config.systemId === "") {
-	    wrapper.innerHTML = "Missing configuration.";
-	    return wrapper;
-	}
-
-        //Display loading while waiting for API response
-        if (!this.loaded) {
-      	    wrapper.innerHTML = "Loading...";
-            return wrapper;
-      	}
-
-        var tb = document.createElement("table");
-
-        if (!this.config.basicHeader) {
-            var imgDiv = document.createElement("div");
-            var img = document.createElement("img");
-            img.src = "/modules/MMM-Solar/solar_white.png";
-
-            var sTitle = document.createElement("p");
-            sTitle.innerHTML = "Solar PV";
-            sTitle.className += " thin normal";
-            imgDiv.appendChild(img);
-    	      imgDiv.appendChild(sTitle);
-
-            var divider = document.createElement("hr");
-            divider.className += " dimmed";
-            wrapper.appendChild(imgDiv);
-            wrapper.appendChild(divider);
-        }
-
-      	for (var i = 0; i < this.results.length; i++) {
-        		var row = document.createElement("tr");
-
-        		var titleTr = document.createElement("td");
-        		var dataTr = document.createElement("td");
-
-        		titleTr.innerHTML = this.titles[i];
-        		dataTr.innerHTML = this.results[i] + " " + this.suffixes[i];
-
-        		titleTr.className += " medium regular bright";
-        		dataTr.classname += " medium light normal";
-
-        		row.appendChild(titleTr);
-        		row.appendChild(dataTr);
-
-        		tb.appendChild(row);
-      	}
-        wrapper.appendChild(tb);
-
-        //Enphase API attribution requirements
-        var attrib = document.createElement("p");
-        attrib.innerHTML = "Powered by Enphase Energy";
-	      attrib.id = "attribution";
-	      attrib.className += "light";
-        wrapper.appendChild(attrib);
-
+    var wrapper = document.createElement("div");
+    if (this.config.apiKey === "" || this.config.userId === "" || this.config.systemId === "") {
+        wrapper.innerHTML = "Missing configuration.";
         return wrapper;
+    }
+
+    //Display loading while waiting for API response
+    if (!this.loaded) {
+        wrapper.innerHTML = "Loading...";
+        return wrapper;
+    }
+
+    var tb = document.createElement("table");
+
+    if (!this.config.basicHeader) {
+        var imgDiv = document.createElement("div");
+        var img = document.createElement("img");
+        img.src = "/modules/MMM-Solar/solar_white.png";
+
+        var sTitle = document.createElement("p");
+        sTitle.innerHTML = "Solar PV";
+        sTitle.className += " thin normal";
+        imgDiv.appendChild(img);
+        imgDiv.appendChild(sTitle);
+
+        var divider = document.createElement("hr");
+        divider.className += " dimmed";
+        wrapper.appendChild(imgDiv);
+        wrapper.appendChild(divider);
+    }
+
+    for (var i = 0; i < this.results.length; i++) {
+        var row = document.createElement("tr");
+
+        var titleTr = document.createElement("td");
+        var dataTr = document.createElement("td");
+
+        titleTr.innerHTML = this.titles[i];
+        dataTr.innerHTML = this.results[i] + " " + this.suffixes[i];
+
+        titleTr.className += " medium regular bright";
+        dataTr.classname += " medium light normal";
+
+        row.appendChild(titleTr);
+        row.appendChild(dataTr);
+
+        tb.appendChild(row);
+    }
+    wrapper.appendChild(tb);
+
+    //Enphase API attribution requirements
+    var attrib = document.createElement("p");
+    attrib.innerHTML = "Powered by Enphase Energy";
+    attrib.id = "attribution";
+    attrib.className += "light";
+    wrapper.appendChild(attrib);
+
+    return wrapper;
     }
 });
