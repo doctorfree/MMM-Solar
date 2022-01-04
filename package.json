@@ -1,0 +1,25 @@
+{
+	"name": "mmm-solar",
+	"version": "1.0.0",
+	"description": "A MagicMirror² module that displays the status of an Enphase rooftop solar array.",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/doctorfree/MMM-Solar"
+	},
+	"keywords": [
+		"smart mirror",
+		"magicmirror",
+		"mirror",
+		"module",
+		"solar"
+	],
+	"author": "Ronald Joe Record",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/doctorfree/MMM-Solar/issues"
+	},
+	"homepage": "https://github.com/doctorfree/MMM-Solar#readme",
+	"dependencies": {
+		"request": "^2.88.2"
+	}
+}
